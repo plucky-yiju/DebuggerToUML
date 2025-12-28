@@ -1,0 +1,88 @@
+<idea-plugin>
+    <id>com.plucky.debuggerToUML</id>
+    <name>Plucky DebuggerToUML</name>
+    <vendor email="support@plucky.com" url="https://www.plucky.com">Plucky</vendor>
+
+    <description><![CDATA[
+    <h1>DebuggerToUML - 调试调用链可视化插件</h1>
+    <p>
+    这是一个强大的IntelliJ IDEA插件，可以在调试过程中自动生成调用链的时序图和思维导图。
+    </p>
+    <h2>主要功能：</h2>
+    <ul>
+        <li>自动捕获调试过程中的调用栈信息</li>
+        <li>生成清晰的时序图和思维导图</li>
+        <li>支持Java源码和class文件解析</li>
+        <li>灵活的调用栈层级控制</li>
+        <li>支持导出为PNG、SVG、PDF格式</li>
+        <li>可配置的类/方法过滤功能</li>
+    </ul>
+    <h2>使用方法：</h2>
+    <ol>
+        <li>在代码中设置断点</li>
+        <li>启动调试模式</li>
+        <li>当断点触发时，插件会自动捕获调用栈</li>
+        <li>在工具窗口中查看生成的时序图</li>
+        <li>可以导出图表或进行进一步配置</li>
+    </ol>
+    ]]></description>
+
+    <change-notes><![CDATA[
+    <h2>Version 1.0.0</h2>
+    <ul>
+        <li>初始版本发布</li>
+        <li>支持调试调用栈捕获</li>
+        <li>支持时序图生成</li>
+        <li>支持基本配置功能</li>
+    </ul>
+    ]]></change-notes>
+
+    <!-- Product and plugin compatibility requirements -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- 工具窗口：显示生成的时序图 -->
+        <toolWindow id="DebuggerToUML"
+                    secondary="true"
+                    icon="/icons/toolWindow.svg"
+                    anchor="right"
+                    factoryClass="com.plucky.debugger.ui.DebuggerToUMLToolWindowFactory"/>
+
+        <!-- 配置界面 -->
+        <projectConfigurable
+            parentId="tools"
+            instance="com.plucky.debugger.config.DebuggerToUMLConfigurable"
+            id="com.plucky.debugger.config.DebuggerToUMLConfigurable"
+            displayName="DebuggerToUML Settings"/>
+
+        <!-- 应用级别的服务 -->
+        <applicationService
+            serviceImplementation="com.plucky.debugger.config.DebuggerToUMLSettings"/>
+    </extensions>
+
+    <actions>
+        <!-- 工具栏动作 -->
+        <action id="com.plucky.debugger.actions.CaptureCallStackAction"
+                class="com.plucky.debugger.actions.CaptureCallStackAction"
+                text="捕获调用栈"
+                description="手动捕获当前调试会话的调用栈"
+                icon="/icons/capture.svg">
+            <add-to-group group-id="DebuggerActions" anchor="last"/>
+        </action>
+
+        <action id="com.plucky.debugger.actions.ExportDiagramAction"
+                class="com.plucky.debugger.actions.ExportDiagramAction"
+                text="导出时序图"
+                description="导出当前时序图为图片或PDF"
+                icon="/icons/export.svg">
+            <add-to-group group-id="DebuggerActions" anchor="last"/>
+        </action>
+    </actions>
+
+    <projectListeners>
+        <!-- 调试监听器：监听调试事件 -->
+        <listener class="com.plucky.debugger.listener.DebuggerEventListener"
+                  topic="com.intellij.xdebugger.XDebuggerManagerListener"/>
+    </projectListeners>
+</idea-plugin>
