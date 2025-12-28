@@ -27,12 +27,22 @@ public class DebuggerToUMLSettings implements PersistentStateComponent<DebuggerT
     public static final int DEFAULT_CALL_STACK_DEPTH = 10;
 
     // 默认过滤规则（每行一个）
+    // 包括：反射调用、代理类、框架底层类等无实际业务意义的类
     public static final String DEFAULT_FILTERED_PACKAGES =
+        "java.lang.reflect.Method\n" +
+        "java.lang.reflect.Constructor\n" +
+        "sun.reflect.NativeMethodAccessorImpl\n" +
+        "sun.reflect.DelegatingMethodAccessorImpl\n" +
+        "sun.reflect.NativeConstructorAccessorImpl\n" +
+        "sun.reflect.DelegatingConstructorAccessorImpl\n" +
+        "jdk.internal.reflect\n" +
         "java.lang.reflect\n" +
         "java.util.concurrent\n" +
         "sun.reflect\n" +
         "com.sun.proxy\n" +
+        "$Proxy\n" +
         "org.springframework.cglib\n" +
+        "org.springframework.aop\n" +
         "net.sf.cglib\n" +
         "com.alibaba.fastjson\n" +
         "org.apache.commons";
