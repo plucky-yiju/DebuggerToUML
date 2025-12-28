@@ -220,16 +220,26 @@ public class CallStackCapture {
             if (className.startsWith("java.") ||
                 className.startsWith("javax.") ||
                 className.startsWith("sun.") ||
-                className.startsWith("jdk.")) {
+                className.startsWith("jdk.") ||
+                className.startsWith("com.sun.") ||
+                className.startsWith("jdk.internal.")) {
+                LOG.debug("Filtered JDK class: " + className);
                 return false;
             }
         }
 
-        // 检查自定义过滤包名
+        // 检查自定义过滤包名/类名（按行分割）
         if (settings.filteredPackages != null && !settings.filteredPackages.isEmpty()) {
-            String[] packages = settings.filteredPackages.split(",");
-            for (String pkg : packages) {
-                if (className.startsWith(pkg.trim())) {
+            String[] lines = settings.filteredPackages.split("\\r?\\n");
+            for (String line : lines) {
+                String filter = line.trim();
+                if (filter.isEmpty()) {
+                    continue;
+                }
+
+                // 支持精确匹配类名或包名前缀匹配
+                if (className.equals(filter) || className.startsWith(filter + ".") || className.startsWith(filter)) {
+                    LOG.debug("Filtered by custom rule '" + filter + "': " + className);
                     return false;
                 }
             }

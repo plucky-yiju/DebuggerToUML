@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTabbedPane;
+import com.plucky.debugger.config.DebuggerToUMLSettings;
 import com.plucky.debugger.generator.PlantUMLRenderer;
 
 import javax.swing.*;
@@ -26,6 +27,7 @@ public class DebuggerToUMLToolWindow {
     private JButton exportButton;
     private JButton clearButton;
     private JButton renderButton;
+    private JCheckBox enableCheckBox;  // 新增：启用/禁用开关
     private JBTabbedPane tabbedPane;
 
     public DebuggerToUMLToolWindow(Project project) {
@@ -41,6 +43,20 @@ public class DebuggerToUMLToolWindow {
 
         // 创建工具栏
         JPanel toolbarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        // 启用/禁用开关
+        enableCheckBox = new JCheckBox("启用自动捕获", DebuggerToUMLSettings.getInstance().autoCapture);
+        enableCheckBox.setToolTipText("启用后，断点触发时会自动捕获调用栈");
+        enableCheckBox.addActionListener(e -> {
+            boolean enabled = enableCheckBox.isSelected();
+            DebuggerToUMLSettings.getInstance().autoCapture = enabled;
+            LOG.info("Auto capture " + (enabled ? "enabled" : "disabled"));
+        });
+        toolbarPanel.add(enableCheckBox);
+
+        // 分隔符
+        toolbarPanel.add(new JSeparator(SwingConstants.VERTICAL));
+
         captureButton = new JButton("捕获调用栈");
         captureButton.setToolTipText("手动捕获当前调试会话的调用栈");
 

@@ -26,7 +26,17 @@ public class DebuggerToUMLSettings implements PersistentStateComponent<DebuggerT
     public static final int MAX_CALL_STACK_DEPTH = 100;
     public static final int DEFAULT_CALL_STACK_DEPTH = 10;
 
-    public static final String DEFAULT_FILTERED_PACKAGES = "java.lang,java.util,sun.";
+    // 默认过滤规则（每行一个）
+    public static final String DEFAULT_FILTERED_PACKAGES =
+        "java.lang.reflect\n" +
+        "java.util.concurrent\n" +
+        "sun.reflect\n" +
+        "com.sun.proxy\n" +
+        "org.springframework.cglib\n" +
+        "net.sf.cglib\n" +
+        "com.alibaba.fastjson\n" +
+        "org.apache.commons";
+
     public static final String DEFAULT_DIAGRAM_TYPE = "plantuml";
 
     // 最大调用栈深度，默认为10

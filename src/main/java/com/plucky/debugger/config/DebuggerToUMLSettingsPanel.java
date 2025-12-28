@@ -16,7 +16,7 @@ public class DebuggerToUMLSettingsPanel {
     private JCheckBox showReturnValuesCheckBox;
     private JCheckBox showTimestampsCheckBox;
     private JCheckBox filterJdkCheckBox;
-    private JTextField filteredPackagesField;
+    private JTextArea filteredPackagesArea;  // 改为JTextArea
     private JComboBox<String> diagramTypeComboBox;
     private JButton resetButton;
     private JLabel validationLabel;
@@ -103,20 +103,42 @@ public class DebuggerToUMLSettingsPanel {
 
         row++;
 
-        // 过滤的包名
+        // 过滤的包名 - 改为多行文本框
         gbc.gridx = 0;
         gbc.gridy = row;
-        gbc.gridwidth = 1;
+        gbc.gridwidth = 2;
         gbc.weightx = 0;
-        mainPanel.add(new JLabel("过滤的包名（逗号分隔）:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        filteredPackagesField = new JTextField();
-        filteredPackagesField.setToolTipText("输入要过滤的包名前缀，用逗号分隔。例如: com.example.util,org.springframework");
-        mainPanel.add(filteredPackagesField, gbc);
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        JLabel filterLabel = new JLabel("过滤的类名/包名（每行一个）:");
+        filterLabel.setToolTipText("每行输入一个要过滤的类名或包名前缀");
+        mainPanel.add(filterLabel, gbc);
 
         row++;
+
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        gbc.weighty = 0.3;
+        gbc.fill = GridBagConstraints.BOTH;
+        filteredPackagesArea = new JTextArea(5, 40);
+        filteredPackagesArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        filteredPackagesArea.setToolTipText(
+            "每行输入一个要过滤的类名或包名前缀\n" +
+            "例如:\n" +
+            "com.example.util\n" +
+            "org.springframework\n" +
+            "com.alibaba.fastjson"
+        );
+        JScrollPane scrollPane = new JScrollPane(filteredPackagesArea);
+        scrollPane.setPreferredSize(new Dimension(400, 100));
+        mainPanel.add(scrollPane, gbc);
+
+        row++;
+
+        // 重置fill和weighty
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 0;
 
         // 图表类型
         gbc.gridx = 0;
@@ -174,7 +196,7 @@ public class DebuggerToUMLSettingsPanel {
             || showReturnValuesCheckBox.isSelected() != settings.showReturnValues
             || showTimestampsCheckBox.isSelected() != settings.showTimestamps
             || filterJdkCheckBox.isSelected() != settings.filterJdkClasses
-            || !filteredPackagesField.getText().equals(settings.filteredPackages)
+            || !filteredPackagesArea.getText().equals(settings.filteredPackages)
             || !diagramTypeComboBox.getSelectedItem().equals(settings.diagramType);
     }
 
@@ -199,9 +221,9 @@ public class DebuggerToUMLSettingsPanel {
         }
 
         // 验证过滤包名（允许为空）
-        String packages = filteredPackagesField.getText();
+        String packages = filteredPackagesArea.getText();
         if (packages == null) {
-            filteredPackagesField.setText("");
+            filteredPackagesArea.setText("");
         }
 
         // 验证图表类型
@@ -225,7 +247,7 @@ public class DebuggerToUMLSettingsPanel {
         settings.showReturnValues = showReturnValuesCheckBox.isSelected();
         settings.showTimestamps = showTimestampsCheckBox.isSelected();
         settings.filterJdkClasses = filterJdkCheckBox.isSelected();
-        settings.filteredPackages = filteredPackagesField.getText();
+        settings.filteredPackages = filteredPackagesArea.getText();
         settings.diagramType = (String) diagramTypeComboBox.getSelectedItem();
 
         // 应用后验证并修复配置
@@ -242,7 +264,7 @@ public class DebuggerToUMLSettingsPanel {
         showReturnValuesCheckBox.setSelected(settings.showReturnValues);
         showTimestampsCheckBox.setSelected(settings.showTimestamps);
         filterJdkCheckBox.setSelected(settings.filterJdkClasses);
-        filteredPackagesField.setText(settings.filteredPackages);
+        filteredPackagesArea.setText(settings.filteredPackages);
         diagramTypeComboBox.setSelectedItem(settings.diagramType);
         validationLabel.setText(" ");
     }
@@ -254,7 +276,7 @@ public class DebuggerToUMLSettingsPanel {
         int result = JOptionPane.showConfirmDialog(
             mainPanel,
             "确定要将所有配置重置为默认值吗？",
-            "确认重置",
+            "确认重启",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE
         );
@@ -266,7 +288,7 @@ public class DebuggerToUMLSettingsPanel {
             showReturnValuesCheckBox.setSelected(false);
             showTimestampsCheckBox.setSelected(false);
             filterJdkCheckBox.setSelected(true);
-            filteredPackagesField.setText(DebuggerToUMLSettings.DEFAULT_FILTERED_PACKAGES);
+            filteredPackagesArea.setText(DebuggerToUMLSettings.DEFAULT_FILTERED_PACKAGES);
             diagramTypeComboBox.setSelectedItem(DebuggerToUMLSettings.DEFAULT_DIAGRAM_TYPE);
             validationLabel.setText(" ");
         }
