@@ -18,6 +18,7 @@ public class DebuggerListenerManager implements Disposable {
 
     public DebuggerListenerManager(Project project) {
         this.project = project;
+        LOG.info("DebuggerListenerManager constructor called for project: " + project.getName());
         init();
     }
 
@@ -28,7 +29,15 @@ public class DebuggerListenerManager implements Disposable {
         // 注册监听器到XDebuggerManager
         project.getMessageBus().connect(this).subscribe(XDebuggerManager.TOPIC, listener);
 
-        LOG.info("DebuggerListenerManager initialized for project: " + project.getName());
+        LOG.info("DebuggerListenerManager initialized and listener registered for project: " + project.getName());
+
+        // 检查是否已经有活动的调试会话
+        XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
+        if (debuggerManager.getCurrentSession() != null) {
+            LOG.info("Found existing debug session, triggering currentSessionChanged");
+            // 手动触发一次，以便监听已存在的会话
+            listener.currentSessionChanged(null, debuggerManager.getCurrentSession());
+        }
     }
 
     @Override
