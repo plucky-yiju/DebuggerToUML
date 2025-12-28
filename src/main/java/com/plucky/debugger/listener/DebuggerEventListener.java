@@ -1,14 +1,20 @@
 package com.plucky.debugger.listener;
 
+import com.intellij.debugger.engine.DebugProcessImpl;
+import com.intellij.debugger.engine.SuspendContextImpl;
+import com.intellij.debugger.jdi.StackFrameProxyImpl;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XDebuggerManagerListener;
 import com.plucky.debugger.capture.CallStackCapture;
+import com.plucky.debugger.capture.DebugLogCapture;
 import com.plucky.debugger.config.DebuggerToUMLSettings;
 import com.plucky.debugger.generator.DiagramGenerator;
 import com.plucky.debugger.generator.DiagramGeneratorFactory;
+import com.plucky.debugger.logger.DebugLogWriter;
 import com.plucky.debugger.model.CallStackInfo;
+import com.plucky.debugger.model.DebugLogInfo;
 import com.plucky.debugger.ui.DebuggerToUMLToolWindowManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -76,6 +82,31 @@ public class DebuggerEventListener implements XDebuggerManagerListener {
      */
     private void onSessionPaused(XDebugSession session) {
         DebuggerToUMLSettings settings = DebuggerToUMLSettings.getInstance();
+
+        // 自动日志输出
+        if (settings.enableAutoLogging) {
+            try {
+                // 获取当前栈帧
+                DebugProcessImpl debugProcess = (DebugProcessImpl) session.getDebugProcess();
+                if (debugProcess != null) {
+                    SuspendContextImpl suspendContext = debugProcess.getSuspendManager().getPausedContext();
+                    if (suspendContext != null && suspendContext.getFrameProxy() != null) {
+                        StackFrameProxyImpl frameProxy = suspendContext.getFrameProxy();
+
+                        // 捕获调试信息
+                        DebugLogInfo logInfo = DebugLogCapture.captureDebugInfo(frameProxy);
+
+                        // 异步输出日志
+                        if (logInfo != null) {
+                            DebugLogWriter.writeLogAsync(logInfo);
+                            LOG.info("Debug log captured and queued for output");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to capture and output debug log", e);
+            }
+        }
 
         // 如果启用了自动捕获，则捕获调用栈
         if (settings.autoCapture) {

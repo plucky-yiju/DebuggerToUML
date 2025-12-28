@@ -73,6 +73,11 @@ public class DebuggerToUMLSettings implements PersistentStateComponent<DebuggerT
     // 图表类型：plantuml 或 graphviz
     public String diagramType = DEFAULT_DIAGRAM_TYPE;
 
+    // 自动日志输出配置
+    public boolean enableAutoLogging = false;           // 是否启用自动日志输出
+    public boolean logToIdeaLog = true;                 // 输出到IDEA日志
+    public boolean logToFile = true;                    // 输出到独立文件
+
     public static DebuggerToUMLSettings getInstance() {
         return ApplicationManager.getApplication().getService(DebuggerToUMLSettings.class);
     }
