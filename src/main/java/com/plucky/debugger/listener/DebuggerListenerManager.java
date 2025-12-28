@@ -1,0 +1,37 @@
+package com.plucky.debugger.listener;
+
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.project.Project;
+import com.intellij.xdebugger.XDebuggerManager;
+
+/**
+ * 调试监听器管理器
+ * 作为项目级别的服务，负责注册和管理调试事件监听器
+ */
+public class DebuggerListenerManager implements Disposable {
+
+    private final Project project;
+    private DebuggerEventListener listener;
+
+    public DebuggerListenerManager(Project project) {
+        this.project = project;
+        init();
+    }
+
+    private void init() {
+        // 创建监听器
+        listener = new DebuggerEventListener(project);
+
+        // 注册监听器到XDebuggerManager
+        XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
+        debuggerManager.addDebuggerManagerListener(listener, this);
+
+        System.out.println("DebuggerListenerManager initialized for project: " + project.getName());
+    }
+
+    @Override
+    public void dispose() {
+        // 清理资源
+        System.out.println("DebuggerListenerManager disposed for project: " + project.getName());
+    }
+}

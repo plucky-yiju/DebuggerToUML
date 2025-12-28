@@ -16,8 +16,12 @@ dependencies {
     implementation("org.ow2.asm:asm-util:9.6")
     implementation("org.ow2.asm:asm-tree:9.6")
 
-    // PlantUML for diagram generation
+    // PlantUML for diagram generation (离线可用)
+    // PlantUML包含所有必要的依赖，可以完全离线运行
     implementation("net.sourceforge.plantuml:plantuml:1.2024.0")
+
+    // 注意：PlantUML默认使用Graphviz进行布局，但也支持纯Java的Smetana布局引擎
+    // Smetana是PlantUML内置的，不需要额外依赖，完全离线可用
 
     testImplementation("junit:junit:4.13.2")
 }

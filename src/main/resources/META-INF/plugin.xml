@@ -45,7 +45,6 @@
         <!-- 工具窗口：显示生成的时序图 -->
         <toolWindow id="DebuggerToUML"
                     secondary="true"
-                    icon="/icons/toolWindow.svg"
                     anchor="right"
                     factoryClass="com.plucky.debugger.ui.DebuggerToUMLToolWindowFactory"/>
 
@@ -59,6 +58,10 @@
         <!-- 应用级别的服务 -->
         <applicationService
             serviceImplementation="com.plucky.debugger.config.DebuggerToUMLSettings"/>
+
+        <!-- 项目级别的服务：调试监听器管理器 -->
+        <projectService
+            serviceImplementation="com.plucky.debugger.listener.DebuggerListenerManager"/>
     </extensions>
 
     <actions>
@@ -66,23 +69,15 @@
         <action id="com.plucky.debugger.actions.CaptureCallStackAction"
                 class="com.plucky.debugger.actions.CaptureCallStackAction"
                 text="捕获调用栈"
-                description="手动捕获当前调试会话的调用栈"
-                icon="/icons/capture.svg">
+                description="手动捕获当前调试会话的调用栈">
             <add-to-group group-id="DebuggerActions" anchor="last"/>
         </action>
 
         <action id="com.plucky.debugger.actions.ExportDiagramAction"
                 class="com.plucky.debugger.actions.ExportDiagramAction"
                 text="导出时序图"
-                description="导出当前时序图为图片或PDF"
-                icon="/icons/export.svg">
+                description="导出当前时序图为图片或PDF">
             <add-to-group group-id="DebuggerActions" anchor="last"/>
         </action>
     </actions>
-
-    <projectListeners>
-        <!-- 调试监听器：监听调试事件 -->
-        <listener class="com.plucky.debugger.listener.DebuggerEventListener"
-                  topic="com.intellij.xdebugger.XDebuggerManagerListener"/>
-    </projectListeners>
 </idea-plugin>

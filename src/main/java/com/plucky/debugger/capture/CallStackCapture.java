@@ -18,7 +18,7 @@ import java.util.List;
 public class CallStackCapture {
 
     /**
-     * 捕获当前调试会话的调用栈
+     * 捕获当前调试会话的调用栈（同步方法）
      *
      * @param session 调试会话
      * @return 调用栈信息
@@ -39,21 +39,36 @@ public class CallStackCapture {
         }
 
         CallStackInfo callStackInfo = new CallStackInfo();
+        callStackInfo.setSessionName(session.getSessionName());
         DebuggerToUMLSettings settings = DebuggerToUMLSettings.getInstance();
 
-        // 获取栈帧列表
-        List<XStackFrame> frames = new ArrayList<>();
+        // 使用CountDownLatch等待异步操作完成
+        final List<XStackFrame> frames = new ArrayList<>();
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+
         activeStack.computeStackFrames(0, new XExecutionStack.XStackFrameContainer() {
             @Override
             public void addStackFrames(@org.jetbrains.annotations.NotNull List<? extends XStackFrame> stackFrames, boolean last) {
                 frames.addAll(stackFrames);
+                if (last) {
+                    latch.countDown();
+                }
             }
 
             @Override
             public void errorOccurred(@org.jetbrains.annotations.NotNull String errorMessage) {
                 System.err.println("Error capturing stack frames: " + errorMessage);
+                latch.countDown();
             }
         });
+
+        // 等待异步操作完成，最多等待5秒
+        try {
+            latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
 
         // 处理栈帧，转换为方法调用信息
         int depth = 0;
@@ -84,36 +99,60 @@ public class CallStackCapture {
             return null;
         }
 
-        // 获取方法的完整描述
-        String frameText = frame.toString();
-
-        // 解析类名和方法名
-        // 格式通常为: ClassName.methodName(FileName.java:lineNumber)
         MethodCallInfo info = new MethodCallInfo();
         info.setDepth(depth);
         info.setTimestamp(System.currentTimeMillis());
 
-        // 简单解析（实际实现需要更复杂的解析逻辑）
-        if (frameText.contains(".")) {
-            int lastDot = frameText.lastIndexOf('.');
-            int openParen = frameText.indexOf('(', lastDot);
+        // 尝试从XStackFrame获取更详细的信息
+        com.intellij.xdebugger.frame.XSourcePosition sourcePosition = frame.getSourcePosition();
+        if (sourcePosition != null) {
+            // 从源位置获取文件信息
+            String fileName = sourcePosition.getFile().getName();
+            int lineNumber = sourcePosition.getLine();
 
-            if (lastDot > 0 && openParen > lastDot) {
-                String className = frameText.substring(0, lastDot);
-                String methodName = frameText.substring(lastDot + 1, openParen);
-
-                info.setClassName(className);
-                info.setMethodName(methodName);
-            } else {
-                info.setClassName("Unknown");
-                info.setMethodName(frameText);
-            }
+            // 尝试从frame的presentation获取方法信息
+            String frameText = frame.toString();
+            parseFrameText(frameText, info);
         } else {
-            info.setClassName("Unknown");
-            info.setMethodName(frameText);
+            // 如果没有源位置，使用toString解析
+            String frameText = frame.toString();
+            parseFrameText(frameText, info);
         }
 
         return info;
+    }
+
+    /**
+     * 解析栈帧文本，提取类名和方法名
+     * 支持多种格式：
+     * - ClassName.methodName(FileName.java:lineNumber)
+     * - package.ClassName.methodName
+     * - methodName
+     */
+    private static void parseFrameText(String frameText, MethodCallInfo info) {
+        if (frameText == null || frameText.isEmpty()) {
+            info.setClassName("Unknown");
+            info.setMethodName("Unknown");
+            return;
+        }
+
+        // 移除文件名和行号部分 (FileName.java:123)
+        int parenIndex = frameText.indexOf('(');
+        String methodPart = parenIndex > 0 ? frameText.substring(0, parenIndex) : frameText;
+
+        // 查找最后一个点，分离类名和方法名
+        int lastDot = methodPart.lastIndexOf('.');
+        if (lastDot > 0 && lastDot < methodPart.length() - 1) {
+            String className = methodPart.substring(0, lastDot);
+            String methodName = methodPart.substring(lastDot + 1);
+
+            info.setClassName(className);
+            info.setMethodName(methodName);
+        } else {
+            // 没有点，可能只是方法名
+            info.setClassName("Unknown");
+            info.setMethodName(methodPart);
+        }
     }
 
     /**
