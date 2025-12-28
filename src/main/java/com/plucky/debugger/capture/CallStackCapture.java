@@ -1,5 +1,6 @@
 package com.plucky.debugger.capture;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XStackFrame;
@@ -17,6 +18,8 @@ import java.util.List;
  */
 public class CallStackCapture {
 
+    private static final Logger LOG = Logger.getInstance(CallStackCapture.class);
+
     /**
      * 捕获当前调试会话的调用栈（同步方法）
      *
@@ -25,16 +28,19 @@ public class CallStackCapture {
      */
     public static CallStackInfo captureCallStack(XDebugSession session) {
         if (session == null) {
+            LOG.warn("Cannot capture call stack: session is null");
             return null;
         }
 
         XSuspendContext suspendContext = session.getSuspendContext();
         if (suspendContext == null) {
+            LOG.warn("Cannot capture call stack: suspend context is null");
             return null;
         }
 
         XExecutionStack activeStack = suspendContext.getActiveExecutionStack();
         if (activeStack == null) {
+            LOG.warn("Cannot capture call stack: active stack is null");
             return null;
         }
 
@@ -57,23 +63,31 @@ public class CallStackCapture {
 
             @Override
             public void errorOccurred(@org.jetbrains.annotations.NotNull String errorMessage) {
-                System.err.println("Error capturing stack frames: " + errorMessage);
+                LOG.error("Error capturing stack frames: " + errorMessage);
                 latch.countDown();
             }
         });
 
         // 等待异步操作完成，最多等待5秒
         try {
-            latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            boolean completed = latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!completed) {
+                LOG.warn("Timeout waiting for stack frames");
+                return null;
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            LOG.error("Interrupted while waiting for stack frames", e);
             return null;
         }
+
+        LOG.info("Captured " + frames.size() + " stack frames");
 
         // 处理栈帧，转换为方法调用信息
         int depth = 0;
         for (XStackFrame frame : frames) {
             if (depth >= settings.maxCallStackDepth) {
+                LOG.debug("Reached max call stack depth: " + settings.maxCallStackDepth);
                 break;
             }
 
@@ -84,6 +98,7 @@ public class CallStackCapture {
             }
         }
 
+        LOG.info("Processed " + depth + " methods after filtering");
         return callStackInfo;
     }
 

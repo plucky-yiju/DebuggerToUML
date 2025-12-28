@@ -39,9 +39,16 @@ public class DebuggerToUMLToolWindow {
         // 创建工具栏
         JPanel toolbarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         captureButton = new JButton("捕获调用栈");
+        captureButton.setToolTipText("手动捕获当前调试会话的调用栈");
+
         renderButton = new JButton("渲染图表");
+        renderButton.setToolTipText("将PlantUML代码渲染为时序图");
+
         exportButton = new JButton("导出图表");
+        exportButton.setToolTipText("导出时序图为PNG/SVG/PDF文件");
+
         clearButton = new JButton("清空");
+        clearButton.setToolTipText("清空当前显示的内容");
 
         toolbarPanel.add(captureButton);
         toolbarPanel.add(renderButton);
@@ -55,13 +62,7 @@ public class DebuggerToUMLToolWindow {
         diagramTextArea = new JTextArea();
         diagramTextArea.setEditable(false);
         diagramTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        diagramTextArea.setText("等待捕获调用栈...\n\n" +
-            "使用方法：\n" +
-            "1. 在代码中设置断点\n" +
-            "2. 启动调试模式\n" +
-            "3. 当断点触发时，插件会自动捕获调用栈\n" +
-            "4. 点击'渲染图表'按钮查看图形化时序图\n" +
-            "5. 可以将代码复制到PlantUML编辑器中查看");
+        diagramTextArea.setText(getWelcomeMessage());
 
         JBScrollPane codeScrollPane = new JBScrollPane(diagramTextArea);
         tabbedPane.addTab("PlantUML代码", codeScrollPane);
@@ -82,6 +83,29 @@ public class DebuggerToUMLToolWindow {
         renderButton.addActionListener(e -> renderDiagram());
     }
 
+    /**
+     * 获取欢迎消息
+     */
+    private String getWelcomeMessage() {
+        return "欢迎使用 DebuggerToUML 插件！\n\n" +
+            "=== 快速开始 ===\n" +
+            "1. 在代码中设置断点\n" +
+            "2. 启动调试模式（Debug）\n" +
+            "3. 当断点触发时，插件会自动捕获调用栈\n" +
+            "4. 点击'渲染图表'按钮查看图形化时序图\n" +
+            "5. 点击'导出图表'按钮保存为文件\n\n" +
+            "=== 配置选项 ===\n" +
+            "Settings -> Tools -> DebuggerToUML Settings\n" +
+            "- 调整最大调用栈深度\n" +
+            "- 配置类/方法过滤规则\n" +
+            "- 启用/禁用自动捕获\n\n" +
+            "=== 提示 ===\n" +
+            "- 可以将PlantUML代码复制到在线编辑器查看\n" +
+            "- 支持导出PNG、SVG、PDF格式\n" +
+            "- 完全离线可用，无需网络连接\n\n" +
+            "等待捕获调用栈...";
+    }
+
     public JPanel getContent() {
         return mainPanel;
     }
@@ -90,9 +114,45 @@ public class DebuggerToUMLToolWindow {
      * 更新显示的图表内容
      */
     public void updateDiagram(String diagramCode) {
-        diagramTextArea.setText(diagramCode);
-        // 自动切换到代码视图
-        tabbedPane.setSelectedIndex(0);
+        if (diagramCode != null && !diagramCode.isEmpty()) {
+            diagramTextArea.setText(diagramCode);
+            // 自动切换到代码视图
+            tabbedPane.setSelectedIndex(0);
+
+            // 显示通知
+            showNotification("调用栈已捕获，共 " + countMethods(diagramCode) + " 个方法");
+        }
+    }
+
+    /**
+     * 统计方法数量
+     */
+    private int countMethods(String plantUMLCode) {
+        if (plantUMLCode == null) return 0;
+        int count = 0;
+        String[] lines = plantUMLCode.split("\n");
+        for (String line : lines) {
+            if (line.contains("participant")) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 显示通知消息
+     */
+    private void showNotification(String message) {
+        // 可以使用IDEA的通知系统
+        com.intellij.notification.Notifications.Bus.notify(
+            new com.intellij.notification.Notification(
+                "DebuggerToUML",
+                "DebuggerToUML",
+                message,
+                com.intellij.notification.NotificationType.INFORMATION
+            ),
+            project
+        );
     }
 
     /**
@@ -100,13 +160,17 @@ public class DebuggerToUMLToolWindow {
      */
     private void renderDiagram() {
         String plantUMLCode = diagramTextArea.getText();
-        if (plantUMLCode == null || plantUMLCode.trim().isEmpty()) {
+        if (plantUMLCode == null || plantUMLCode.trim().isEmpty() || plantUMLCode.contains("欢迎使用")) {
             JOptionPane.showMessageDialog(mainPanel,
-                "没有PlantUML代码可以渲染",
+                "没有PlantUML代码可以渲染\n\n请先捕获调用栈或手动输入PlantUML代码",
                 "提示",
                 JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+
+        // 显示进度提示
+        imageLabel.setText("正在渲染图表，请稍候...");
+        imageLabel.setIcon(null);
 
         // 在后台线程中渲染
         SwingWorker<BufferedImage, Void> worker = new SwingWorker<BufferedImage, Void>() {
@@ -120,14 +184,26 @@ public class DebuggerToUMLToolWindow {
                 try {
                     BufferedImage image = get();
                     if (image != null) {
+                        imageLabel.setText(null);
                         imageLabel.setIcon(new ImageIcon(image));
                         // 切换到图片视图
                         tabbedPane.setSelectedIndex(1);
                     }
                 } catch (Exception e) {
+                    imageLabel.setText("渲染失败");
+                    String errorMsg = "渲染失败: " + e.getMessage() + "\n\n";
+                    errorMsg += "可能的原因：\n";
+                    errorMsg += "1. PlantUML代码格式错误\n";
+                    errorMsg += "2. 内存不足\n";
+                    errorMsg += "3. 图表过于复杂\n\n";
+                    errorMsg += "建议：\n";
+                    errorMsg += "- 检查PlantUML代码语法\n";
+                    errorMsg += "- 减少调用栈深度\n";
+                    errorMsg += "- 查看IDEA日志获取详细错误信息";
+
                     JOptionPane.showMessageDialog(mainPanel,
-                        "渲染失败: " + e.getMessage(),
-                        "错误",
+                        errorMsg,
+                        "渲染错误",
                         JOptionPane.ERROR_MESSAGE);
                     e.printStackTrace();
                 }
