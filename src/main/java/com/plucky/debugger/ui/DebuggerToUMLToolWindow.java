@@ -6,6 +6,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTabbedPane;
 import com.plucky.debugger.config.DebuggerToUMLSettings;
 import com.plucky.debugger.generator.PlantUMLRenderer;
+import com.plucky.debugger.model.CallStackInfo;
 import com.plucky.debugger.model.CaptureHistory;
 
 import javax.swing.*;
