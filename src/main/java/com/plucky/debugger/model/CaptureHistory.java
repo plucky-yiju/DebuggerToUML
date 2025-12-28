@@ -15,12 +15,18 @@ public class CaptureHistory {
     private final String classListText;
     private BufferedImage renderedImage;
     private final int methodCount;
+    private final CallStackInfo callStackInfo;  // 新增：保存原始调用栈信息
 
     public CaptureHistory(String plantUMLCode, String classListText, int methodCount) {
+        this(plantUMLCode, classListText, methodCount, null);
+    }
+
+    public CaptureHistory(String plantUMLCode, String classListText, int methodCount, CallStackInfo callStackInfo) {
         this.timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         this.plantUMLCode = plantUMLCode;
         this.classListText = classListText;
         this.methodCount = methodCount;
+        this.callStackInfo = callStackInfo;
     }
 
     public String getTimestamp() {
@@ -45,6 +51,10 @@ public class CaptureHistory {
 
     public int getMethodCount() {
         return methodCount;
+    }
+
+    public CallStackInfo getCallStackInfo() {
+        return callStackInfo;
     }
 
     /**

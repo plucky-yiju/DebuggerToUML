@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.content.Content;
+import com.plucky.debugger.model.CallStackInfo;
 
 /**
  * 工具窗口管理器
@@ -18,6 +19,17 @@ public class DebuggerToUMLToolWindowManager {
      * @param diagramCode 图表代码
      */
     public static void updateDiagram(Project project, String diagramCode) {
+        updateDiagram(project, diagramCode, null);
+    }
+
+    /**
+     * 更新工具窗口显示的图表（带CallStackInfo）
+     *
+     * @param project 项目
+     * @param diagramCode 图表代码
+     * @param callStackInfo 调用栈信息
+     */
+    public static void updateDiagram(Project project, String diagramCode, CallStackInfo callStackInfo) {
         if (project == null || diagramCode == null) {
             return;
         }
@@ -31,7 +43,7 @@ public class DebuggerToUMLToolWindowManager {
                 Object component = content.getComponent();
                 if (component instanceof javax.swing.JPanel) {
                     // 查找DebuggerToUMLToolWindow实例
-                    findAndUpdateToolWindow((javax.swing.JPanel) component, diagramCode);
+                    findAndUpdateToolWindow((javax.swing.JPanel) component, diagramCode, callStackInfo);
                 }
             }
 
@@ -43,11 +55,11 @@ public class DebuggerToUMLToolWindowManager {
     /**
      * 查找并更新DebuggerToUMLToolWindow
      */
-    private static void findAndUpdateToolWindow(javax.swing.JPanel panel, String diagramCode) {
+    private static void findAndUpdateToolWindow(javax.swing.JPanel panel, String diagramCode, CallStackInfo callStackInfo) {
         // 尝试从panel的client property中获取DebuggerToUMLToolWindow实例
         Object toolWindowObj = panel.getClientProperty("DebuggerToUMLToolWindow");
         if (toolWindowObj instanceof DebuggerToUMLToolWindow) {
-            ((DebuggerToUMLToolWindow) toolWindowObj).updateDiagram(diagramCode);
+            ((DebuggerToUMLToolWindow) toolWindowObj).updateDiagram(diagramCode, callStackInfo);
         }
     }
 }

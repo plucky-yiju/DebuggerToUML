@@ -93,9 +93,10 @@ public class DebuggerEventListener implements XDebuggerManagerListener {
                         DiagramGenerator generator = DiagramGeneratorFactory.createGenerator();
                         String diagramCode = generator.generateDiagram(callStackInfo);
 
-                        // 更新工具窗口显示
+                        // 更新工具窗口显示，传递CallStackInfo
+                        CallStackInfo finalCallStackInfo = callStackInfo;
                         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
-                            DebuggerToUMLToolWindowManager.updateDiagram(project, diagramCode);
+                            DebuggerToUMLToolWindowManager.updateDiagram(project, diagramCode, finalCallStackInfo);
                         });
                     } else {
                         LOG.warn("Failed to capture call stack or stack is empty");

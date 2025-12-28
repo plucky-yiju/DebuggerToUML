@@ -164,13 +164,20 @@ public class DebuggerToUMLToolWindow {
      * 更新显示的图表内容
      */
     public void updateDiagram(String diagramCode) {
+        updateDiagram(diagramCode, null);
+    }
+
+    /**
+     * 更新显示的图表内容（带CallStackInfo）
+     */
+    public void updateDiagram(String diagramCode, CallStackInfo callStackInfo) {
         if (diagramCode != null && !diagramCode.isEmpty()) {
             // 提取类路径列表文本
             String classListText = extractClassListText(diagramCode);
             int methodCount = countMethods(diagramCode);
 
-            // 创建新的历史记录
-            CaptureHistory history = new CaptureHistory(diagramCode, classListText, methodCount);
+            // 创建新的历史记录，包含CallStackInfo
+            CaptureHistory history = new CaptureHistory(diagramCode, classListText, methodCount, callStackInfo);
             captureHistories.add(history);
 
             // 更新历史记录下拉框
@@ -422,5 +429,15 @@ public class DebuggerToUMLToolWindow {
 
     public String getDiagramCode() {
         return diagramTextArea.getText();
+    }
+
+    /**
+     * 获取当前的CallStackInfo
+     */
+    public CallStackInfo getCurrentCallStackInfo() {
+        if (currentHistory != null) {
+            return currentHistory.getCallStackInfo();
+        }
+        return null;
     }
 }
