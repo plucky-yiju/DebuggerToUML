@@ -24,29 +24,36 @@ public class DebuggerEventListener implements XDebuggerManagerListener {
 
     public DebuggerEventListener(Project project) {
         this.project = project;
+        LOG.info("DebuggerEventListener created for project: " + project.getName());
     }
 
     @Override
     public void currentSessionChanged(XDebugSession previousSession, XDebugSession currentSession) {
+        LOG.info("currentSessionChanged called - previous: " +
+            (previousSession != null ? previousSession.getSessionName() : "null") +
+            ", current: " +
+            (currentSession != null ? currentSession.getSessionName() : "null"));
+
         if (currentSession != null) {
-            LOG.info("Current session changed to: " + currentSession.getSessionName());
+            LOG.info("Adding session listener to: " + currentSession.getSessionName());
 
             // 添加会话监听器，监听暂停事件
             currentSession.addSessionListener(new com.intellij.xdebugger.XDebugSessionListener() {
                 @Override
                 public void sessionPaused() {
+                    LOG.info("sessionPaused event triggered!");
                     // 断点触发，会话暂停
                     onSessionPaused(currentSession);
                 }
 
                 @Override
                 public void sessionResumed() {
-                    LOG.debug("Session resumed");
+                    LOG.info("Session resumed");
                 }
 
                 @Override
                 public void sessionStopped() {
-                    LOG.debug("Session stopped");
+                    LOG.info("Session stopped");
                 }
 
                 @Override
@@ -59,6 +66,8 @@ public class DebuggerEventListener implements XDebuggerManagerListener {
                     LOG.debug("Before session resume");
                 }
             });
+
+            LOG.info("Session listener added successfully");
         }
     }
 

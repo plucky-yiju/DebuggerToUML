@@ -2,6 +2,7 @@ package com.plucky.debugger.actions;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.XDebuggerManager;
 import com.intellij.xdebugger.XDebugSession;
@@ -9,6 +10,7 @@ import com.plucky.debugger.capture.CallStackCapture;
 import com.plucky.debugger.generator.DiagramGenerator;
 import com.plucky.debugger.generator.DiagramGeneratorFactory;
 import com.plucky.debugger.model.CallStackInfo;
+import com.plucky.debugger.ui.DebuggerToUMLToolWindowManager;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -19,10 +21,13 @@ import javax.swing.*;
  */
 public class CaptureCallStackAction extends AnAction {
 
+    private static final Logger LOG = Logger.getInstance(CaptureCallStackAction.class);
+
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
         if (project == null) {
+            LOG.warn("Project is null");
             return;
         }
 
@@ -31,6 +36,7 @@ public class CaptureCallStackAction extends AnAction {
         XDebugSession currentSession = debuggerManager.getCurrentSession();
 
         if (currentSession == null) {
+            LOG.warn("No active debug session");
             JOptionPane.showMessageDialog(null,
                 "没有活动的调试会话。请先启动调试。",
                 "提示",
@@ -38,32 +44,47 @@ public class CaptureCallStackAction extends AnAction {
             return;
         }
 
-        // 捕获调用栈
-        CallStackInfo callStackInfo = CallStackCapture.captureCallStack(currentSession);
+        LOG.info("Manual capture triggered for session: " + currentSession.getSessionName());
 
-        if (callStackInfo == null || callStackInfo.isEmpty()) {
-            JOptionPane.showMessageDialog(null,
-                "无法捕获调用栈信息。",
-                "错误",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        // 在后台线程中执行捕获操作
+        com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            try {
+                // 捕获调用栈
+                CallStackInfo callStackInfo = CallStackCapture.captureCallStack(currentSession);
 
-        // 生成图表
-        DiagramGenerator generator = DiagramGeneratorFactory.createGenerator();
-        String diagramCode = generator.generateDiagram(callStackInfo);
+                if (callStackInfo == null || callStackInfo.isEmpty()) {
+                    LOG.warn("Failed to capture call stack or stack is empty");
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(null,
+                            "无法捕获调用栈信息。请确保程序已暂停在断点处。",
+                            "错误",
+                            JOptionPane.ERROR_MESSAGE);
+                    });
+                    return;
+                }
 
-        // 显示结果（这里简单地弹出对话框，实际应该更新工具窗口）
-        JTextArea textArea = new JTextArea(diagramCode);
-        textArea.setEditable(false);
-        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
-        JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new java.awt.Dimension(600, 400));
+                LOG.info("Call stack captured successfully. Methods: " + callStackInfo.getDepth());
 
-        JOptionPane.showMessageDialog(null,
-            scrollPane,
-            "PlantUML时序图代码",
-            JOptionPane.INFORMATION_MESSAGE);
+                // 生成图表
+                DiagramGenerator generator = DiagramGeneratorFactory.createGenerator();
+                String diagramCode = generator.generateDiagram(callStackInfo);
+
+                // 更新工具窗口显示
+                com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                    DebuggerToUMLToolWindowManager.updateDiagram(project, diagramCode);
+                    LOG.info("Tool window updated with diagram");
+                });
+
+            } catch (Exception ex) {
+                LOG.error("Error capturing call stack", ex);
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(null,
+                        "捕获调用栈时发生错误: " + ex.getMessage(),
+                        "错误",
+                        JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        });
     }
 
     @Override

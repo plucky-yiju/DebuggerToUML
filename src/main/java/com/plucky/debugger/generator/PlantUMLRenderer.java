@@ -1,5 +1,6 @@
 package com.plucky.debugger.generator;
 
+import com.intellij.openapi.diagnostic.Logger;
 import net.sourceforge.plantuml.FileFormat;
 import net.sourceforge.plantuml.FileFormatOption;
 import net.sourceforge.plantuml.SourceStringReader;
@@ -18,6 +19,8 @@ import javax.imageio.ImageIO;
  */
 public class PlantUMLRenderer {
 
+    private static final Logger LOG = Logger.getInstance(PlantUMLRenderer.class);
+
     /**
      * 将PlantUML代码渲染成BufferedImage
      *
@@ -30,20 +33,38 @@ public class PlantUMLRenderer {
             throw new IllegalArgumentException("PlantUML code cannot be null or empty");
         }
 
-        // 使用SourceStringReader渲染PlantUML
-        // 注意：使用!pragma layout smetana 确保使用内置的Smetana布局引擎，完全离线
-        String codeWithPragma = injectSmetanaPragma(plantUMLCode);
+        LOG.info("Starting to render PlantUML diagram");
+        LOG.debug("PlantUML code length: " + plantUMLCode.length());
 
-        SourceStringReader reader = new SourceStringReader(codeWithPragma);
+        try {
+            // 使用SourceStringReader渲染PlantUML
+            // 注意：使用!pragma layout smetana 确保使用内置的Smetana布局引擎，完全离线
+            String codeWithPragma = injectSmetanaPragma(plantUMLCode);
+            LOG.debug("Code with pragma: " + codeWithPragma);
 
-        // 渲染为PNG格式
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        reader.outputImage(baos, new FileFormatOption(FileFormat.PNG));
+            SourceStringReader reader = new SourceStringReader(codeWithPragma);
 
-        // 将字节数组转换为BufferedImage
-        byte[] imageBytes = baos.toByteArray();
-        java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(imageBytes);
-        return ImageIO.read(bais);
+            // 渲染为PNG格式
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            reader.outputImage(baos, new FileFormatOption(FileFormat.PNG));
+
+            // 将字节数组转换为BufferedImage
+            byte[] imageBytes = baos.toByteArray();
+            LOG.info("Rendered image size: " + imageBytes.length + " bytes");
+
+            java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(imageBytes);
+            BufferedImage image = ImageIO.read(bais);
+
+            if (image == null) {
+                throw new IOException("Failed to read rendered image");
+            }
+
+            LOG.info("Successfully rendered diagram: " + image.getWidth() + "x" + image.getHeight());
+            return image;
+        } catch (Exception e) {
+            LOG.error("Failed to render PlantUML diagram", e);
+            throw new IOException("Failed to render PlantUML diagram: " + e.getMessage(), e);
+        }
     }
 
     /**

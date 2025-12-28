@@ -70,14 +70,14 @@
                 class="com.plucky.debugger.actions.CaptureCallStackAction"
                 text="捕获调用栈"
                 description="手动捕获当前调试会话的调用栈">
-            <add-to-group group-id="DebuggerActions" anchor="last"/>
+            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar" anchor="last"/>
         </action>
 
         <action id="com.plucky.debugger.actions.ExportDiagramAction"
                 class="com.plucky.debugger.actions.ExportDiagramAction"
                 text="导出时序图"
                 description="导出当前时序图为图片或PDF">
-            <add-to-group group-id="DebuggerActions" anchor="last"/>
+            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar" anchor="last"/>
         </action>
     </actions>
 </idea-plugin>

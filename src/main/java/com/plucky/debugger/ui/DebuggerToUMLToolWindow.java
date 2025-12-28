@@ -1,5 +1,6 @@
 package com.plucky.debugger.ui;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTabbedPane;
@@ -14,6 +15,8 @@ import java.awt.image.BufferedImage;
  * 显示生成的时序图
  */
 public class DebuggerToUMLToolWindow {
+
+    private static final Logger LOG = Logger.getInstance(DebuggerToUMLToolWindow.class);
 
     private final Project project;
     private JPanel mainPanel;
@@ -168,6 +171,9 @@ public class DebuggerToUMLToolWindow {
             return;
         }
 
+        LOG.info("Starting diagram rendering");
+        LOG.debug("PlantUML code to render:\n" + plantUMLCode);
+
         // 显示进度提示
         imageLabel.setText("正在渲染图表，请稍候...");
         imageLabel.setIcon(null);
@@ -176,6 +182,7 @@ public class DebuggerToUMLToolWindow {
         SwingWorker<BufferedImage, Void> worker = new SwingWorker<BufferedImage, Void>() {
             @Override
             protected BufferedImage doInBackground() throws Exception {
+                LOG.info("Rendering in background thread");
                 return PlantUMLRenderer.renderToImage(plantUMLCode);
             }
 
@@ -184,12 +191,17 @@ public class DebuggerToUMLToolWindow {
                 try {
                     BufferedImage image = get();
                     if (image != null) {
+                        LOG.info("Rendering completed successfully");
                         imageLabel.setText(null);
                         imageLabel.setIcon(new ImageIcon(image));
                         // 切换到图片视图
                         tabbedPane.setSelectedIndex(1);
+                    } else {
+                        LOG.error("Rendered image is null");
+                        imageLabel.setText("渲染失败：图片为空");
                     }
                 } catch (Exception e) {
+                    LOG.error("Failed to render diagram", e);
                     imageLabel.setText("渲染失败");
                     String errorMsg = "渲染失败: " + e.getMessage() + "\n\n";
                     errorMsg += "可能的原因：\n";
@@ -199,17 +211,29 @@ public class DebuggerToUMLToolWindow {
                     errorMsg += "建议：\n";
                     errorMsg += "- 检查PlantUML代码语法\n";
                     errorMsg += "- 减少调用栈深度\n";
-                    errorMsg += "- 查看IDEA日志获取详细错误信息";
+                    errorMsg += "- 查看IDEA日志获取详细错误信息\n\n";
+                    errorMsg += "详细错误：\n" + getStackTrace(e);
 
                     JOptionPane.showMessageDialog(mainPanel,
                         errorMsg,
                         "渲染错误",
                         JOptionPane.ERROR_MESSAGE);
-                    e.printStackTrace();
                 }
             }
         };
         worker.execute();
+    }
+
+    /**
+     * 获取异常堆栈信息
+     */
+    private String getStackTrace(Exception e) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+        e.printStackTrace(pw);
+        String stackTrace = sw.toString();
+        // 只返回前500个字符
+        return stackTrace.length() > 500 ? stackTrace.substring(0, 500) + "..." : stackTrace;
     }
 
     /**

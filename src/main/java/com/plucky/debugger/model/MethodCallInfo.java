@@ -12,6 +12,7 @@ public class MethodCallInfo {
     private String returnValue;
     private int depth;
     private long timestamp;
+    private int lineNumber;
 
     public MethodCallInfo() {
     }
@@ -69,6 +70,14 @@ public class MethodCallInfo {
         this.timestamp = timestamp;
     }
 
+    public int getLineNumber() {
+        return lineNumber;
+    }
+
+    public void setLineNumber(int lineNumber) {
+        this.lineNumber = lineNumber;
+    }
+
     /**
      * 获取完整的方法签名
      */
@@ -79,6 +88,9 @@ public class MethodCallInfo {
             sb.append("(").append(parameters).append(")");
         } else {
             sb.append("()");
+        }
+        if (lineNumber > 0) {
+            sb.append(":").append(lineNumber);
         }
         return sb.toString();
     }

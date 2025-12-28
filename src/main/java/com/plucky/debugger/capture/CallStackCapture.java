@@ -118,20 +118,54 @@ public class CallStackCapture {
         info.setDepth(depth);
         info.setTimestamp(System.currentTimeMillis());
 
-        // 尝试从XStackFrame获取更详细的信息
+        // 尝试使用Java调试器API获取详细信息
+        if (frame instanceof com.intellij.debugger.engine.JavaStackFrame) {
+            com.intellij.debugger.engine.JavaStackFrame javaFrame = (com.intellij.debugger.engine.JavaStackFrame) frame;
+            try {
+                com.intellij.debugger.jdi.StackFrameProxyImpl frameProxy = javaFrame.getStackFrameProxy();
+                if (frameProxy != null) {
+                    com.sun.jdi.Location location = frameProxy.location();
+                    if (location != null) {
+                        // 获取类名
+                        String className = location.declaringType().name();
+                        // 获取方法名
+                        String methodName = location.method().name();
+                        // 获取行号
+                        int lineNumber = location.lineNumber();
+
+                        info.setClassName(className);
+                        info.setMethodName(methodName);
+                        info.setLineNumber(lineNumber);
+
+                        LOG.debug("Extracted: " + className + "." + methodName + ":" + lineNumber);
+                        return info;
+                    }
+                }
+            } catch (Exception e) {
+                LOG.warn("Failed to extract info from JavaStackFrame: " + e.getMessage());
+            }
+        }
+
+        // 回退方案：尝试从XStackFrame获取源位置信息
         com.intellij.xdebugger.XSourcePosition sourcePosition = frame.getSourcePosition();
         if (sourcePosition != null) {
             // 从源位置获取文件信息
             String fileName = sourcePosition.getFile().getName();
             int lineNumber = sourcePosition.getLine();
 
-            // 尝试从frame的presentation获取方法信息
-            String frameText = frame.toString();
-            parseFrameText(frameText, info);
+            // 从文件名推断类名（去掉.java扩展名）
+            String className = fileName.replace(".java", "").replace(".kt", "");
+
+            info.setClassName(className);
+            info.setMethodName("method"); // 无法获取方法名时使用占位符
+            info.setLineNumber(lineNumber);
+
+            LOG.debug("Extracted from source position: " + className + ":line " + lineNumber);
         } else {
-            // 如果没有源位置，使用toString解析
+            // 最后的回退：使用toString解析
             String frameText = frame.toString();
             parseFrameText(frameText, info);
+            LOG.debug("Extracted from toString: " + frameText);
         }
 
         return info;
