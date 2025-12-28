@@ -22,6 +22,7 @@ public class DebuggerToUMLToolWindow {
     private final Project project;
     private JPanel mainPanel;
     private JTextArea diagramTextArea;
+    private JTextArea classListArea;  // 新增：类路径列表
     private JLabel imageLabel;
     private JButton captureButton;
     private JButton exportButton;
@@ -93,6 +94,14 @@ public class DebuggerToUMLToolWindow {
         JBScrollPane imageScrollPane = new JBScrollPane(imageLabel);
         tabbedPane.addTab("时序图", imageScrollPane);
 
+        // 类路径列表视图
+        classListArea = new JTextArea();
+        classListArea.setEditable(false);
+        classListArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        classListArea.setText("等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。");
+        JBScrollPane classListScrollPane = new JBScrollPane(classListArea);
+        tabbedPane.addTab("类路径列表", classListScrollPane);
+
         // 添加组件到主面板
         mainPanel.add(toolbarPanel, BorderLayout.NORTH);
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
@@ -135,12 +144,66 @@ public class DebuggerToUMLToolWindow {
     public void updateDiagram(String diagramCode) {
         if (diagramCode != null && !diagramCode.isEmpty()) {
             diagramTextArea.setText(diagramCode);
+
+            // 提取并显示类路径列表
+            updateClassList(diagramCode);
+
             // 自动切换到代码视图
             tabbedPane.setSelectedIndex(0);
 
             // 显示通知
             showNotification("调用栈已捕获，共 " + countMethods(diagramCode) + " 个方法");
         }
+    }
+
+    /**
+     * 从PlantUML代码中提取类路径列表并更新显示
+     */
+    private void updateClassList(String plantUMLCode) {
+        if (plantUMLCode == null || plantUMLCode.isEmpty()) {
+            return;
+        }
+
+        StringBuilder classList = new StringBuilder();
+        classList.append("=== 调用栈涉及的类路径列表 ===\n\n");
+        classList.append("提示：复制需要过滤的类路径到Settings中的过滤配置\n");
+        classList.append("Settings -> Tools -> DebuggerToUML Settings -> 过滤的类名/包名\n\n");
+        classList.append("---\n\n");
+
+        java.util.Set<String> uniqueClasses = new java.util.LinkedHashSet<>();
+        String[] lines = plantUMLCode.split("\n");
+
+        // 从participant行提取类名
+        for (String line : lines) {
+            if (line.trim().startsWith("participant")) {
+                // 格式: participant "ClassName" as ClassName_0
+                int firstQuote = line.indexOf('"');
+                int secondQuote = line.indexOf('"', firstQuote + 1);
+                if (firstQuote >= 0 && secondQuote > firstQuote) {
+                    String className = line.substring(firstQuote + 1, secondQuote).trim();
+                    // 移除可能的前缀（如"JavaFrame "）
+                    if (className.contains(" ")) {
+                        className = className.substring(className.lastIndexOf(' ') + 1);
+                    }
+                    uniqueClasses.add(className);
+                }
+            }
+        }
+
+        // 按字母顺序排序并显示
+        java.util.List<String> sortedClasses = new java.util.ArrayList<>(uniqueClasses);
+        java.util.Collections.sort(sortedClasses);
+
+        int index = 1;
+        for (String className : sortedClasses) {
+            classList.append(String.format("%2d. %s\n", index++, className));
+        }
+
+        classList.append("\n---\n");
+        classList.append(String.format("共 %d 个不同的类\n", uniqueClasses.size()));
+
+        classListArea.setText(classList.toString());
+        LOG.info("Updated class list with " + uniqueClasses.size() + " classes");
     }
 
     /**
@@ -258,6 +321,7 @@ public class DebuggerToUMLToolWindow {
     private void clearDiagram() {
         diagramTextArea.setText("");
         imageLabel.setIcon(null);
+        classListArea.setText("等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。");
     }
 
     public JButton getCaptureButton() {
