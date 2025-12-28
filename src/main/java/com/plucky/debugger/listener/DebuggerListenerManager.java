@@ -23,8 +23,7 @@ public class DebuggerListenerManager implements Disposable {
         listener = new DebuggerEventListener(project);
 
         // 注册监听器到XDebuggerManager
-        XDebuggerManager debuggerManager = XDebuggerManager.getInstance(project);
-        debuggerManager.addDebuggerManagerListener(listener, this);
+        project.getMessageBus().connect(this).subscribe(XDebuggerManager.TOPIC, listener);
 
         System.out.println("DebuggerListenerManager initialized for project: " + project.getName());
     }

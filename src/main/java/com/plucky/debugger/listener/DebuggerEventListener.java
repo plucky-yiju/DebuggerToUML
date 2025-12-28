@@ -27,16 +27,6 @@ public class DebuggerEventListener implements XDebuggerManagerListener {
     }
 
     @Override
-    public void processStarted(@NotNull XDebugSession session) {
-        LOG.info("Debug session started: " + session.getSessionName());
-    }
-
-    @Override
-    public void processStopped(@NotNull XDebugSession session) {
-        LOG.info("Debug session stopped: " + session.getSessionName());
-    }
-
-    @Override
     public void currentSessionChanged(XDebugSession previousSession, XDebugSession currentSession) {
         if (currentSession != null) {
             LOG.info("Current session changed to: " + currentSession.getSessionName());

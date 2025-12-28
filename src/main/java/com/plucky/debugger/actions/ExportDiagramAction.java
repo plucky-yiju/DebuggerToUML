@@ -61,7 +61,7 @@ public class ExportDiagramAction extends AnAction {
         );
 
         FileSaverDialog dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project);
-        VirtualFileWrapper fileWrapper = dialog.save(null, "sequence-diagram." + selectedFormat.toLowerCase());
+        VirtualFileWrapper fileWrapper = dialog.save(project.getBaseDir(), "sequence-diagram." + selectedFormat.toLowerCase());
 
         if (fileWrapper == null) {
             return; // 用户取消

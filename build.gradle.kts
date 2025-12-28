@@ -7,6 +7,9 @@ group = "com.plucky"
 version = "1.0.0"
 
 repositories {
+    // 使用阿里云镜像加速依赖下载
+    maven { url = uri("https://maven.aliyun.com/repository/public") }
+    maven { url = uri("https://maven.aliyun.com/repository/central") }
     mavenCentral()
 }
 
@@ -18,7 +21,7 @@ dependencies {
 
     // PlantUML for diagram generation (离线可用)
     // PlantUML包含所有必要的依赖，可以完全离线运行
-    implementation("net.sourceforge.plantuml:plantuml:1.2024.0")
+    implementation("net.sourceforge.plantuml:plantuml:1.2023.13")
 
     // 注意：PlantUML默认使用Graphviz进行布局，但也支持纯Java的Smetana布局引擎
     // Smetana是PlantUML内置的，不需要额外依赖，完全离线可用

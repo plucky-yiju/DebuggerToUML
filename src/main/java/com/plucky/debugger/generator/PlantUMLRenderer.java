@@ -38,7 +38,7 @@ public class PlantUMLRenderer {
 
         // 渲染为PNG格式
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        String desc = reader.outputImage(baos, new FileFormatOption(FileFormat.PNG));
+        reader.outputImage(baos, new FileFormatOption(FileFormat.PNG));
 
         // 将字节数组转换为BufferedImage
         byte[] imageBytes = baos.toByteArray();

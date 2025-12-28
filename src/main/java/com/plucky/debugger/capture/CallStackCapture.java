@@ -119,7 +119,7 @@ public class CallStackCapture {
         info.setTimestamp(System.currentTimeMillis());
 
         // 尝试从XStackFrame获取更详细的信息
-        com.intellij.xdebugger.frame.XSourcePosition sourcePosition = frame.getSourcePosition();
+        com.intellij.xdebugger.XSourcePosition sourcePosition = frame.getSourcePosition();
         if (sourcePosition != null) {
             // 从源位置获取文件信息
             String fileName = sourcePosition.getFile().getName();
