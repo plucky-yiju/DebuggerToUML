@@ -6,10 +6,13 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTabbedPane;
 import com.plucky.debugger.config.DebuggerToUMLSettings;
 import com.plucky.debugger.generator.PlantUMLRenderer;
+import com.plucky.debugger.model.CaptureHistory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * DebuggerToUML工具窗口
@@ -30,9 +33,13 @@ public class DebuggerToUMLToolWindow {
     private JButton renderButton;
     private JCheckBox enableCheckBox;  // 新增：启用/禁用开关
     private JBTabbedPane tabbedPane;
+    private JComboBox<CaptureHistory> historyComboBox;  // 新增：历史记录下拉框
+    private List<CaptureHistory> captureHistories;  // 新增：历史记录列表
+    private CaptureHistory currentHistory;  // 当前显示的历史记录
 
     public DebuggerToUMLToolWindow(Project project) {
         this.project = project;
+        this.captureHistories = new ArrayList<>();
         initUI();
 
         // 将自己存储到panel的client property中，方便后续访问
@@ -56,6 +63,21 @@ public class DebuggerToUMLToolWindow {
         toolbarPanel.add(enableCheckBox);
 
         // 分隔符
+        toolbarPanel.add(new JSeparator(SwingConstants.VERTICAL));
+
+        // 历史记录下拉框
+        toolbarPanel.add(new JLabel("历史记录:"));
+        historyComboBox = new JComboBox<>();
+        historyComboBox.setPreferredSize(new Dimension(250, 25));
+        historyComboBox.setToolTipText("选择要查看的历史捕获记录");
+        historyComboBox.addActionListener(e -> {
+            CaptureHistory selected = (CaptureHistory) historyComboBox.getSelectedItem();
+            if (selected != null && selected != currentHistory) {
+                loadHistory(selected);
+            }
+        });
+        toolbarPanel.add(historyComboBox);
+
         toolbarPanel.add(new JSeparator(SwingConstants.VERTICAL));
 
         captureButton = new JButton("捕获调用栈");
@@ -143,25 +165,61 @@ public class DebuggerToUMLToolWindow {
      */
     public void updateDiagram(String diagramCode) {
         if (diagramCode != null && !diagramCode.isEmpty()) {
-            diagramTextArea.setText(diagramCode);
+            // 提取类路径列表文本
+            String classListText = extractClassListText(diagramCode);
+            int methodCount = countMethods(diagramCode);
 
-            // 提取并显示类路径列表
-            updateClassList(diagramCode);
+            // 创建新的历史记录
+            CaptureHistory history = new CaptureHistory(diagramCode, classListText, methodCount);
+            captureHistories.add(history);
 
-            // 自动切换到代码视图
-            tabbedPane.setSelectedIndex(0);
+            // 更新历史记录下拉框
+            historyComboBox.addItem(history);
+            historyComboBox.setSelectedItem(history);
+
+            // 显示当前捕获的内容
+            displayHistory(history);
 
             // 显示通知
-            showNotification("调用栈已捕获，共 " + countMethods(diagramCode) + " 个方法");
+            showNotification("调用栈已捕获，共 " + methodCount + " 个方法");
+
+            LOG.info("Capture saved to history. Total history count: " + captureHistories.size());
         }
     }
 
     /**
-     * 从PlantUML代码中提取类路径列表并更新显示
+     * 显示历史记录
      */
-    private void updateClassList(String plantUMLCode) {
+    private void displayHistory(CaptureHistory history) {
+        currentHistory = history;
+        diagramTextArea.setText(history.getPlantUMLCode());
+        classListArea.setText(history.getClassListText());
+
+        // 如果已经渲染过，直接显示
+        if (history.getRenderedImage() != null) {
+            imageLabel.setIcon(new ImageIcon(history.getRenderedImage()));
+        } else {
+            imageLabel.setIcon(null);
+        }
+
+        // 自动切换到代码视图
+        tabbedPane.setSelectedIndex(0);
+    }
+
+    /**
+     * 加载历史记录
+     */
+    private void loadHistory(CaptureHistory history) {
+        LOG.info("Loading history: " + history.getDisplayLabel());
+        displayHistory(history);
+    }
+
+    /**
+     * 提取类路径列表文本
+     */
+    private String extractClassListText(String plantUMLCode) {
         if (plantUMLCode == null || plantUMLCode.isEmpty()) {
-            return;
+            return "等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。";
         }
 
         StringBuilder classList = new StringBuilder();
@@ -202,8 +260,7 @@ public class DebuggerToUMLToolWindow {
         classList.append("\n---\n");
         classList.append(String.format("共 %d 个不同的类\n", uniqueClasses.size()));
 
-        classListArea.setText(classList.toString());
-        LOG.info("Updated class list with " + uniqueClasses.size() + " classes");
+        return classList.toString();
     }
 
     /**
@@ -273,6 +330,13 @@ public class DebuggerToUMLToolWindow {
                         LOG.info("Rendering completed successfully");
                         imageLabel.setText(null);
                         imageLabel.setIcon(new ImageIcon(image));
+
+                        // 保存渲染后的图片到当前历史记录
+                        if (currentHistory != null) {
+                            currentHistory.setRenderedImage(image);
+                            LOG.info("Rendered image saved to history");
+                        }
+
                         // 切换到图片视图
                         tabbedPane.setSelectedIndex(1);
                     } else {
@@ -316,12 +380,36 @@ public class DebuggerToUMLToolWindow {
     }
 
     /**
-     * 清空图表
+     * 清空图表（只清空当前显示，不删除历史记录）
      */
     private void clearDiagram() {
-        diagramTextArea.setText("");
-        imageLabel.setIcon(null);
-        classListArea.setText("等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。");
+        int result = JOptionPane.showConfirmDialog(
+            mainPanel,
+            "是否清空所有历史记录？\n\n选择\"是\"：清空所有历史记录\n选择\"否\"：只清空当前显示",
+            "清空确认",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (result == JOptionPane.YES_OPTION) {
+            // 清空所有历史记录
+            captureHistories.clear();
+            historyComboBox.removeAllItems();
+            currentHistory = null;
+            diagramTextArea.setText("");
+            imageLabel.setIcon(null);
+            classListArea.setText("等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。");
+            LOG.info("All history cleared");
+        } else if (result == JOptionPane.NO_OPTION) {
+            // 只清空当前显示
+            diagramTextArea.setText("");
+            imageLabel.setIcon(null);
+            classListArea.setText("等待捕获调用栈...\n\n提示：这里会显示所有涉及的类路径，方便你识别需要过滤的类。");
+            historyComboBox.setSelectedIndex(-1);
+            currentHistory = null;
+            LOG.info("Current display cleared");
+        }
+        // CANCEL_OPTION: 不做任何操作
     }
 
     public JButton getCaptureButton() {
